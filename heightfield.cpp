@@ -1,4 +1,4 @@
-﻿//test
+﻿
 #include "heightfield.h"
 
 #include <iostream>
