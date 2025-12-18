@@ -83,7 +83,7 @@ void HeightField::loadDiffuseTexture(const std::string& diffusePath)
 /// Generate a grid mesh for the height field Task 1
 void HeightField::generateMesh(int tesselation)
 {
-    m_meshResolution = tesselation;
+    m_meshResolution = tesselation; // how many square to make
 
     // Generate vertices - flat grid at Y=0
     std::vector<vec3> positions;
@@ -92,19 +92,19 @@ void HeightField::generateMesh(int tesselation)
     float step = 2.0f / tesselation;  // From -1 to +1 = range of 2
 
     // Create vertices
-    for (int z = 0; z <= tesselation; z++) {
-        for (int x = 0; x <= tesselation; x++) {
+    for (int z = 0; z <= tesselation; z++) { // go nord or east
+        for (int x = 0; x <= tesselation; x++) { // go east or west
             // X,Z from -1 to +1
-            float posX = -1.0f + x * step;
-            float posZ = -1.0f + z * step;
+			float posX = -1.0f + x * step; // left to right
+			float posZ = -1.0f + z * step; // bottom to top
 
             // Flat mesh at Y=0 (will be displaced in shader)
-            positions.push_back(vec3(posX, 0.0f, posZ));
+			positions.push_back(vec3(posX, 0.0f, posZ)); // y = 0 for now
 
-            // Texture coordinates from 0 to 1
-            float texU = x / (float)tesselation;
-            float texV = z / (float)tesselation;
-            texCoords.push_back(vec2(texU, texV));
+            // Texture coordinates from 0 to 1 like putting the picture on the mesh/ground
+			float texU = x / (float)tesselation; // left to right
+			float texV = z / (float)tesselation; // bottom to top
+			texCoords.push_back(vec2(texU, texV)); // u,v coordinates
         }
     }
 
@@ -144,14 +144,14 @@ void HeightField::generateMesh(int tesselation)
     glGenBuffers(1, &m_positionBuffer); 
     glBindBuffer(GL_ARRAY_BUFFER, m_positionBuffer);
     glBufferData(GL_ARRAY_BUFFER, positions.size() * sizeof(vec3), positions.data(), GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr); // attribute 0: position for each vertex, 3 floats (x,y,z)
     glEnableVertexAttribArray(0); 
 
     // Texture coordinate buffer
     glGenBuffers(1, &m_uvBuffer);
     glBindBuffer(GL_ARRAY_BUFFER, m_uvBuffer);
     glBufferData(GL_ARRAY_BUFFER, texCoords.size() * sizeof(vec2), texCoords.data(), GL_STATIC_DRAW);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, nullptr); // attribute 1: uv coordinates for each vertex, 2 floats (u,v)
     glEnableVertexAttribArray(1);
 
     // Index buffer

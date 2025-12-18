@@ -65,7 +65,7 @@ const std::string envmap_base_name = "001";
 vec3 lightPosition;
 vec3 point_light_color = vec3(1.f, 1.f, 1.f);
 
-float point_light_intensity_multiplier = 10000.0f;
+float point_light_intensity_multiplier = 2.0f;
 
 
 
@@ -224,7 +224,7 @@ void drawScene(GLuint currentShaderProgram,
 	labhelper::setUniformSlow(currentShaderProgram, "viewSpaceLightDir",
 	                          normalize(vec3(viewMatrix * vec4(-lightPosition, 0.0f))));
 
-
+	
 	// Environment
 	labhelper::setUniformSlow(currentShaderProgram, "environment_multiplier", environment_multiplier);
 
@@ -277,21 +277,22 @@ void display(void)
 	mat4 projMatrix = perspective(radians(45.0f), float(windowWidth) / float(windowHeight), 5.0f, 2000.0f);
 	mat4 viewMatrix = lookAt(cameraPosition, cameraPosition + cameraDirection, worldUp);
 
-	vec4 lightStartPosition = vec4(40.0f, 40.0f, 0.0f, 1.0f);
-	lightPosition = vec3(rotate(currentTime, worldUp) * lightStartPosition);
-	mat4 lightViewMatrix = lookAt(lightPosition, vec3(0.0f), worldUp);
-	mat4 lightProjMatrix = perspective(radians(45.0f), 1.0f, 25.0f, 100.0f);
+	vec4 lightStartPosition = vec4(40.0f, 40.0f, 0.0f, 1.0f); // initial position of the light
+	lightPosition = vec3(rotate(currentTime, worldUp) * lightStartPosition); // rotate light around the scene
+
+	mat4 lightViewMatrix = lookAt(lightPosition, vec3(0.0f), worldUp); // light looks at the origin
+	mat4 lightProjMatrix = perspective(radians(45.0f), 1.0f, 25.0f, 100.0f); // light projection matrix
 
 	///////////////////////////////////////////////////////////////////////////
 	// Bind the environment map(s) to unused texture units
 	///////////////////////////////////////////////////////////////////////////
-	glActiveTexture(GL_TEXTURE6);
-	glBindTexture(GL_TEXTURE_2D, environmentMap);
-	glActiveTexture(GL_TEXTURE7);
-	glBindTexture(GL_TEXTURE_2D, irradianceMap);
-	glActiveTexture(GL_TEXTURE8);
-	glBindTexture(GL_TEXTURE_2D, reflectionMap);
-	glActiveTexture(GL_TEXTURE0);
+	glActiveTexture(GL_TEXTURE6); // bind environment map to texture unit 6
+	glBindTexture(GL_TEXTURE_2D, environmentMap); // environment map
+	glActiveTexture(GL_TEXTURE7); // bind irradiance map to texture unit 7
+	glBindTexture(GL_TEXTURE_2D, irradianceMap); // irradiance map
+	glActiveTexture(GL_TEXTURE8); // bind reflection map to texture unit 8
+	glBindTexture(GL_TEXTURE_2D, reflectionMap); // reflection map
+	glActiveTexture(GL_TEXTURE0); // reset to texture unit 0 for safety
 
 
 
@@ -362,6 +363,10 @@ void display(void)
 	// Texture repeat (how many times the texture repeats over the terrain)
 	glUniform1f(glGetUniformLocation(heightfieldShaderProgram, "textureWidth"),512.0f);
 
+
+	//
+	glUniform3f(glGetUniformLocation(heightfieldShaderProgram, "terrainScale"), 500.0f, 1.0f, 500.0f);
+	glUniform2f(glGetUniformLocation(heightfieldShaderProgram, "heightTexelSize"), 1.0f / 512.0f, 1.0f / 512.0f);
 	// --------------------------------------------
 	// Lighting uniforms (MATCH spaceship)
 	// --------------------------------------------
@@ -385,14 +390,14 @@ void display(void)
 		glGetUniformLocation(heightfieldShaderProgram, "environment_multiplier"),
 		environment_multiplier
 	);
-
+	glUniform1f(glGetUniformLocation(heightfieldShaderProgram, "environment_multiplier"), 0.3f);
 	// --------------------------------------------
-	// Material (terrain is NOT metallic)
+	// Material properties (terrain is NOT metallic)
 	// --------------------------------------------
 	glUniform3f(
 		glGetUniformLocation(heightfieldShaderProgram, "material_color"),
 		1.0f, 1.0f, 1.0f
-	);
+	); 
 	glUniform1f(
 		glGetUniformLocation(heightfieldShaderProgram, "material_metalness"),
 		0.0f
@@ -405,6 +410,11 @@ void display(void)
 		glGetUniformLocation(heightfieldShaderProgram, "material_shininess"),
 		8.0f
 	);
+	glUniform1f(
+		glGetUniformLocation(heightfieldShaderProgram, "material_shininess"),
+		64.0f  // Higher = sharper star reflections
+	);
+
 	glUniform3f(
 		glGetUniformLocation(heightfieldShaderProgram, "material_emission"),
 		0.0f, 0.0f, 0.0f
@@ -414,9 +424,10 @@ void display(void)
 	// Matrices
 	// --------------------------------------------
 	mat4 terrainModelMatrix = mat4(1.0f);
-	terrainModelMatrix = translate(terrainModelMatrix, vec3(0.0f, 0.0f, -200.0f));
-	terrainModelMatrix = scale(terrainModelMatrix, vec3(500.0f, 1.0f, 500.0f));
+	terrainModelMatrix = translate(terrainModelMatrix, vec3(0.0f, 0.0f, -200.0f)); // The ground move 200 away from camera
+	terrainModelMatrix = scale(terrainModelMatrix, vec3(500.0f, 1.0f, 500.0f)); // make the ground 500 wider
 
+	// Sending data to the shader
 	glUniformMatrix4fv(
 		glGetUniformLocation(heightfieldShaderProgram, "modelMatrix"),
 		1,
@@ -451,6 +462,13 @@ void display(void)
 	// Draw terrain
 	// --------------------------------------------
 	glDisable(GL_CULL_FACE);   
+
+	glUniform2f(
+		glGetUniformLocation(heightfieldShaderProgram, "heightTexelSize"),
+		1.0f / 512.0f,
+		1.0f / 512.0f
+	);
+
 	terrain.submitTriangles();
 	glEnable(GL_CULL_FACE);
 
